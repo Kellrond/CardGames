@@ -6,14 +6,19 @@ import datetime as dt
 
 class Cribbage:
     def __init__(self, players=2):
+        self.name = "Cribbage - Dev Edition"
+        self.author = "Jordan Kell"
+        self.version = "0.0.3"
+        self.date = "2021-07-31"
+        self.note = "Full random play. Only score go, 15, pairs and 31"
+
         self.rules = self.Rules()
         self.hands = self.Hands()
         self.text = self.Text()
+        self.deckSettings = self.DeckSettings()
         self.settings = self.Settings()
-        self.name = "Cribbage - Dev Edition"
-        self.author = "Jordan Kell"
-        self.version = "0.0.1"
-        self.note = "Full random play. Only score go and " + str(self.rules.countTarget)
+        self.devSettings = self.DevSettings()
+
         self.players = players
         self.playerNames = ["Jordan", "The machine"] 
         while len(self.playerNames) < self.players:
@@ -59,13 +64,37 @@ class Cribbage:
             'rounds': [],
             'scores': [],  
             }
+    class DeckSettings:
+
+        def __init__(self):
+            self.cutHigh = False
+            self.aceHigh = False
+            self.burnCardOnDeal = False
+
+    class DevSettings:
+        def __init__(self):
+            self.autoplay = False
+
+        def listDevSettings(self):
+            settingList = [] 
+            for setting, value in vars(self).items():
+                settingList.append(setting + ": " + str(value))
+            return settingList
 
     class Settings:
         def __init__(self):
             self.difficulty = "random"
-            self.consoleLogging = [None]
-            self.autoplay = False
-            
+            self.consoleLogging = 0
+            self.fileLogging = False
+            self.devMode = False
+            self.games = 1
+
+        def listSettings(self):
+            settingList = [] 
+            for setting, value in vars(self).items():
+                settingList.append(setting + ": " + str(value))
+            return settingList
+                   
     class Rules:
         def __init__(self):
             # Game basics
@@ -75,18 +104,14 @@ class Cribbage:
             self.muggins = False
             # Scoring 
             self.startingScore = 0
-            self.winningScore = 5
+            self.winningScore = 121
             self.countTarget = 31
-            # Deck
-            self.cutHigh = False
-            self.aceHigh = False
-            self.burnCardOnDeal = False
 
         def listRules(self):
-            ruleString = "" 
-            for rule, value in vars(Cribbage.Rules()).items():
-                ruleString += " -> " + rule + ": " + str(value) + "\n"
-            return ruleString[:-1]
+            ruleList = [] 
+            for rule, value in vars(self).items():
+                ruleList.append(rule + ": " + str(value))
+            return ruleList
 
     class Hands:
         def __init__(self):
@@ -97,7 +122,22 @@ class Cribbage:
             # print("Count hands")
             # print("Count crib")
             self.crib.clear()
+        
+        def listHand(self, player):
+            output = []
+            for card in self.hands[player]:
+                output.append("├ " + card.string())
+            return output
 
+        def listCrib(self):
+            output = []
+            cribList = []
+            for playerDiscard in self.crib:
+                cribList += playerDiscard
+            
+            for card in cribList:
+                output.append("├ " + card.string())
+            return output           
 
     class PlayStage:
         def playableCards(self, hand, count):
@@ -113,73 +153,168 @@ class Cribbage:
             if self.score[player] >= self.rules.winningScore:
                 self.winner = player
 
-        def checkForPoints(self, player):
-            # Check for go
+        def scorePairs(self):
+            cardsPlayed = len(self.play)
+            if cardsPlayed == 1:
+                return 0
+            cardsPlayed = [card.rank for card in self.play[:]]
+            cardsPlayed.reverse()   
             score = 0
-            console = []
-
-            if self.count == 15:
-                # score += 1
-                console.append("15")
-            elif self.count == self.rules.countTarget:
-                score += 1
-                console.append("31")
-            
-            if len(self.goList) == self.players:
-                score += 1
-                console.append("Go")       
-
-            if self.settings.consoleLogging:
-                if len(console) == 1:
-                    output = console[0]
+            if len(set(cardsPlayed[0:2])) == 1:
+                if len(set(cardsPlayed[0:3])) == 1 and cardsPlayed == 3:
+                    if len(set(cardsPlayed[0:4])) == 1 and cardsPlayed == 4:
+                        score = 12
+                    else:
+                        score = 6
                 else:
-                    output = console.pop(0)
-                    for line in console:
-                        output += " and " + line
-
-                print(self.playerNames[player] + " scores " + str(score) + " for " + output)
-
-            self.PlayStage.scoreCount(self, player, 1)
+                    score = 2
+            return score
 
     class Text:
         def __init__(self) -> None:
-            self.titleBumper = "############################# "  
+            self.titleBumper = "░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ "  
+            self.innerBumper = "═════════════════════════════ "
 
-        def centerSpacing(self, title, bumper):
-            titleLength = len(title)
-            totalSpaces = len(bumper)
-            if titleLength > totalSpaces:
-                title = title[:totalSpaces]
-            remainingSpaces = totalSpaces - len(title)
-            halfSpace = int(remainingSpaces / 2)
-            output = " " * halfSpace + title
-            while len(output) < totalSpaces:
-                output += " "
-            return output
-        
-        def columnOutput(a="", b="", c=""):
-            colList = [a, b, c]
-            output = ""
-            totalSpaces = len(Cribbage.Text().titleBumper)
+    # Text functions
+
+    def centerSpacing(self, title):
+        titleLength = len(title)
+        totalSpaces = len(self.text.titleBumper)
+        if titleLength > totalSpaces:
+            title = title[:totalSpaces]
+        remainingSpaces = totalSpaces - len(title)
+        halfSpace = int(remainingSpaces / 2)
+        output = " " * halfSpace + title
+        while len(output) < totalSpaces:
+            output += " "
+        return output
+
+    def columnOutput(self, a="", b="", c="", isList=False, newLine=True):
+        totalSpaces = len(self.text.titleBumper)
+        colList = [a, b, c]
+        output = ""
+
+        if isList:
+            if b == "" and c == "":
+                colList = list(a)
+            while len(colList) % 3 != 0:
+                colList.append([])
+
+        if isList:
+            maxRows = max(len(l) for l in colList)
+            for col in colList:
+                while len(col) < maxRows:
+                    col.append("")
+            for varIndex, col in enumerate(colList):
+                for rowIndex, row in enumerate(col):
+                    while len(row) < totalSpaces:
+                        row += " "
+                    colList[varIndex][rowIndex] = row      
+            count = 0
+            while count < maxRows:
+                output += str(colList[0][count]) + colList[1][count] + colList[2][count] + "\n"
+                count += 1
+                if not newLine:
+                    output = output[:-2]
+                if count == maxRows and len(colList) > 3:
+                    count = 0
+                    output += "\n"
+                    colList = colList[3:]
+            if not newLine:
+                output = output[:-2]
+        else:
             for col in colList:
                 while len(col) < totalSpaces:
                     col += " "
-                output += col
-            return output
-
-        def gameHeader(self):
-            output = self.columnOutput(self.titleBumper, self.centerSpacing(Cribbage().name, self.titleBumper), self.titleBumper)
-            output += "\n Version: %s Author: %s" % (Cribbage().version, Cribbage().author)
-            return output
-    
+                output += str(col)
+        return output
         
+    def consoleLog(self, text, logType=8, newLine=False):
+        # # Loop for lists needed
+        # print(type(text))
+        if self.settings.consoleLogging >= logType:
+            if newLine:
+                print("\n")
+            print(text)
 
+    def titleBumper(self, text):
+        output = self.columnOutput(self.text.titleBumper, self.centerSpacing(text), self.text.titleBumper)
+        return output
+
+    def innerBumper(self, text):
+        output = self.columnOutput(self.text.innerBumper, self.centerSpacing(text), self.text.innerBumper)
+        return output
+
+    def gameHeader(self):
+        output = self.titleBumper(self.name)
+        output += "\n"
+        output += self.columnOutput("Author: %s" % self.author
+                                    ,self.centerSpacing("Version: %s" % self.version)
+                                    ,"Date updated: %s" % self.date)
+        output += '\n'
+        return output       
+
+    def rulesList(self):
+        colA, colB, colC = [[],[],[]]
+        colA = [self.centerSpacing("Rules:")] + self.rules.listRules()
+        colB = [self.centerSpacing("Settings:")] + self.settings.listSettings()
+        if self.settings.devMode:
+            colC = [self.centerSpacing("DevSettings:")] + self.devSettings.listDevSettings()
+        else:
+            colC = []
+        return colA, colB, colC
+
+    def printScore(self):
+        scoreList = []
+        output = self.innerBumper("Score") + "\n"
+        for n in range(0, self.players):
+            scoreList.append(["%s: %s" % (self.playerNames[n], self.score[n])])
+        output += self.columnOutput(scoreList, isList=True, newLine=False)
+        return output
+
+    def printHand(self, player=0, all=False):
+        cribExists = len(self.hands.crib) > 0
+        if self.devSettings.autoplay:
+            all = True
+        if all:
+            output = []
+            for i in range(0, self.players):
+                output.append(["┌─ " + self.playerNames[i]] + self.hands.listHand(i))
+            if cribExists:
+                output.append(["┌─ " + self.playerNames[self.dealer] + "'s crib"] + self.hands.listCrib())
+            output = self.columnOutput(output, isList=True)
+
+        else:
+            output = self.columnOutput(["┌─ " + self.playerNames[player]] + self.hands.listHand(player),[],[], isList=True)
+
+        return output
 
     # Game functions
 
-    def consoleLog(self, text, type="All"):
-        if type in self.settings.consoleLogging or "All" in self.settings.consoleLogging:
-            print(text)
+    def autoDiscard(self, player):
+        hand = self.hands.hands[player]
+        discard = []
+        if self.settings.difficulty == 'random':
+            while len(hand) > self.rules.handSize:
+                pick = randrange(0,len(hand))
+                discard.append(hand.pop(pick))
+            self.hands.crib.append(discard)            
+
+    def autoPlayStage(self, player, hand):
+        if len(self.playableCards) == 0:
+            self.goList.append(player)
+            if len(self.goList) != self.players:           
+                self.consoleLog(self.columnOutput("",self.centerSpacing(self.playerNames[player] + " calls GO"), "") , 1)   
+
+        else:  
+            if self.settings.difficulty == 'random':
+                randPick = randrange(0,len(self.playableCards))
+                pick = self.playableCards[randPick]
+                play = hand.pop(pick)
+                self.playableCards.clear()
+                self.play.append(play)
+                self.count = sum(card.value for card in self.play)  
+            self.consoleLog(self.columnOutput(self.playerNames[player], play.string(), "Count: " + str(self.count)),1)        
 
     def endGame(self, gameCount, duration):
         self.log['game'].append(gameCount)
@@ -187,11 +322,11 @@ class Cribbage:
         self.log['winner'].append(self.winner)
         self.log['rounds'].append(self.round)
         self.log['scores'].append(list(self.score))
-        if self.settings.consoleLogging:
-            print("##### End Game #####")
-            print("Rounds: " + str(self.round))
-            for i, player in enumerate(self.playerNames):
-                print(player + ": " + str(self.score[i]))  
+        # if self.settings.consoleLogging:
+        #     print("##### End Game #####")
+        #     print("Rounds: " + str(self.round))
+        #     for i, player in enumerate(self.playerNames):
+        #         print(player + ": " + str(self.score[i]))  
 
     def endRound(self):
         self.play.clear()
@@ -202,6 +337,53 @@ class Cribbage:
             self.dealer = 0
         else:
             self.dealer += 1
+
+    def endRoundScoreCheck(self, player, hands):
+        score = 0
+        console = []
+        clear = False
+        
+        if player not in self.goList:
+            pairs = self.PlayStage.scorePairs(self)
+            if pairs > 0:
+                score += pairs
+                console.append("pair")
+      
+        if self.count == 15:
+            score += 2
+            console.append("15")
+        elif self.count == self.rules.countTarget:
+            clear = True
+            score += 2
+            console.append(str(self.rules.countTarget))
+        
+        if len(self.goList) == self.players:
+            clear = True
+            score += 1
+            console.append("Go")    
+
+        if max(len(hand) for hand in hands) == 0:
+            clear = True
+            score += 1
+            console.append("Go")   
+
+        if clear:
+            self.play.clear()
+            self.goList.clear()
+            self.count = 0            
+
+        if score > 0:
+            if len(console) == 1:
+                output = console[0]
+            elif len(console) > 1:
+                output = console.pop(0)
+                for line in console:
+                    output += " and " + line
+            output = self.playerNames[player] + " scores " + str(score) + " for " + output
+            self.PlayStage.scoreCount(self, player, score)
+        else:
+            return False
+        return output
 
     def finalizeLog(self):
         self.log['summary']['gamesPlayed'] = len(self.log['game'])
@@ -244,11 +426,6 @@ class Cribbage:
             playOrder += list(range(0, self.dealer + 1))
         return playOrder
 
-    def printScore(self):
-        print("----- SCORE -----")
-        for player in range(0, self.players):
-            print(self.playerNames[player] + " - " + str(self.score[player]))
-
     def reset(self):
         self.score.clear()
         self.prevScore.clear()
@@ -267,88 +444,46 @@ class Cribbage:
         playOrder = self.playOrder()
         
         # Deal hands
+        self.consoleLog(self.innerBumper(self.playerNames[self.dealer] + " deals"), 2)
         round = Deck(self)
         self.hands.hands = round.deal()
-    
-        self.consoleLog("===== " + self.playerNames[self.dealer] + " deals")
-        for i, hand in enumerate(self.hands.hands):
-            self.consoleLog("----- " + self.playerNames[i] + "'s cards -----")
-            for card in hand:
-                self.consoleLog(card.string())
+        self.consoleLog(self.printHand(), 2)
 
         # Discard
-        self.consoleLog("===== Discard")
-
+        self.consoleLog(self.innerBumper("Players discard"), 2)
         for player in playOrder:
-            hand = self.hands.hands[player]
-            if player == 0 and not self.settings.autoplay:
-                self.consoleLog(self, "INSERT CODE TO ALLOW ME TO PLAY")
+            if player == 0 and not self.devSettings.autoplay:
+                self.consoleLog(self, "INSERT CODE TO ALLOW ME TO PLAY", 1)
             else:
-                if self.settings.difficulty == 'random':
-                    while len(hand) > self.rules.handSize:
-                        pick = randrange(0,len(hand))
-                        discard = hand.pop(pick)
-                        self.hands.crib.append(discard)
-
-        # if self.settings.consoleLogging:
-        #     for i, hand in enumerate(self.hands.hands):
-        #         print("----- " + self.playerNames[i] + " keeps")
-        #         for card in hand:
-        #             print(card.string())
-        #     print("----- Crib ")
-        #     for card in self.hands.crib:
-        #         print(card.string())
+                self.autoDiscard(player)
+        self.consoleLog(self.printHand(), 2)
 
         # Play 
-        self.consoleLog("===== Play")
+        self.consoleLog(self.innerBumper("Play"), 1)
+        playHands = self.hands.hands[:]
+        cardsLeft = max(len(hand) for hand in playHands) > 0
 
-        hands = self.hands.hands[:]
-        while max(len(hand) for hand in self.hands.hands) > 0 and len(self.goList) < self.players:
+        while cardsLeft:
             for player in playOrder:
-                hand = hands[player]
-                self.playableCards = self.PlayStage.playableCards(self, hand, self.count)
-                if player not in self.goList:
-                    if player == 0 and not self.settings.autoplay:
+                hand = playHands[player]
+                if player not in self.goList and cardsLeft:
+                    if player == 0 and not self.devSettings.autoplay:
                         if self.settings.consoleLogging:
-                            print("INSERT CODE TO ALLOW ME TO PLAY") # Currently set up for manual Go
+                            self.consoleLog("INSERT CODE TO ALLOW ME TO PLAY", 1)
                     else:
-                        if len(self.playableCards) == 0:
-                            self.goList.append(player)
-
-                            if len(self.goList) == self.players:
-                                self.PlayStage.checkForPoints(self, player)
-                                self.count = 0
-                                self.play.clear()
-                                self.goList.clear()
-
-                            else:
-                                self.consoleLog(self.playerNames[player] + " calls GO" )
-
-                        else:  
-                            if self.settings.difficulty == 'random':
-                                randPick = randrange(0,len(self.playableCards))
-                                pick = self.playableCards[randPick]
-                                play = hand.pop(pick)
-                                self.playableCards.clear()
-                                self.play.append(play)
-                                self.count = sum(card.value for card in self.play)    
-                                
-                                self.consoleLog("Count: " + str(self.count) + " - " + self.playerNames[player] + " plays a " + play.string()) 
-
-            if max(len(hand) for hand in hands) == 0:
+                        self.playableCards = self.PlayStage.playableCards(self, hand, self.count)
+                        self.autoPlayStage(player, hand)
                 
-                if self.count == self.rules.countTarget:
-                    self.PlayStage.scoreCount(self, player, 2)
-                    if self.settings.consoleLogging:
-                        print(self.playerNames[player] + " scores 2 for " + str(self.rules.countTarget) )
-                else:
-                    self.PlayStage.scoreCount(self, player, 1)   
-                    if self.settings.consoleLogging:
-                        print(self.playerNames[player] + " scores 1 for GO" )
+                    scored = self.endRoundScoreCheck(player, playHands)
+                if scored:
+                    self.consoleLog(scored, 1)
+                    scored = None
+                cardsLeft = max(len(hand) for hand in playHands) > 0
+
         # End play 
         self.hands.countHands()
         self.endRound()
-        self.consoleLog(self.printScore())
+        self.consoleLog(self.printScore(),1)
 
         
         

@@ -46,7 +46,6 @@ class Deck:
         self.deck = []
         self.discard = []
         self.game = game
-        self.consoleLogging = game.settings.consoleLogging
         self.cutCount = 0
         self.cutPosition = 0
         for suit in Suits:
@@ -80,27 +79,27 @@ class Deck:
                 cuts.append([player, cut])
             survivors.clear() 
 
-            if self.game.rules.cutHigh:
+            if self.game.deckSettings.cutHigh:
                 winningRank = max(card.rank for p, card in cuts) 
             else:
                 winningRank = min(card.rank for p, card in cuts)
             survivors = [player for player, card in cuts if card.rank == winningRank]
 
-            if self.consoleLogging:
-                for player, card in cuts:
-                    print(self.game.playerNames[player] + " cuts a " + card.string())
-                print("  ---")
-                if len(survivors) == 1:
-                    result = " is the dealer"
-                else: 
-                    result = " ties \n  ---"
-                for player in survivors:
-                    print(self.game.playerNames[player] + result)
+            # if self.consoleLogging:
+            #     for player, card in cuts:
+            #         print(self.game.playerNames[player] + " cuts a " + card.string())
+            #     print("  ---")
+            #     if len(survivors) == 1:
+            #         result = " is the dealer"
+            #     else: 
+            #         result = " ties \n  ---"
+            #     for player in survivors:
+            #         print(self.game.playerNames[player] + result)
         return survivors[0]
 
     def deal(self):
         handsDealt = []
-        if self.game.rules.burnCardOnDeal:
+        if self.game.deckSettings.burnCardOnDeal:
             dealTo = range(0, self.game.players + 1)
         else:
             dealTo = range(0, self.game.players)
@@ -112,7 +111,7 @@ class Deck:
                 dealtCard = self.deck.pop(0)
                 handsDealt[player].append(dealtCard)  
 
-        if self.game.rules.burnCardOnDeal:
+        if self.game.deckSettings.burnCardOnDeal:
             for card in handsDealt.pop(0):
                 self.discard.append(card)
         sortedHands = []
