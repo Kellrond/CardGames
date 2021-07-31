@@ -11,6 +11,7 @@ class Cribbage:
         self.text = self.Text()
         self.settings = self.Settings()
         self.name = "Cribbage - Dev Edition"
+        self.author = "Jordan Kell"
         self.version = "0.0.1"
         self.note = "Full random play. Only score go and " + str(self.rules.countTarget)
         self.players = players
@@ -142,9 +143,9 @@ class Cribbage:
 
     class Text:
         def __init__(self) -> None:
-            self.titleBumper = "############################# "
-            
-        def titleSpacing(self, title, bumper):
+            self.titleBumper = "############################# "  
+
+        def centerSpacing(self, title, bumper):
             titleLength = len(title)
             totalSpaces = len(bumper)
             if titleLength > totalSpaces:
@@ -155,11 +156,20 @@ class Cribbage:
             while len(output) < totalSpaces:
                 output += " "
             return output
+        
+        def columnOutput(a="", b="", c=""):
+            colList = [a, b, c]
+            output = ""
+            totalSpaces = len(Cribbage.Text().titleBumper)
+            for col in colList:
+                while len(col) < totalSpaces:
+                    col += " "
+                output += col
+            return output
 
         def gameHeader(self):
-            output = Cribbage.Text().titleBumper + Cribbage.Text.titleSpacing(self, Cribbage().name, Cribbage.Text().titleBumper) + Cribbage.Text().titleBumper 
-
-
+            output = self.columnOutput(self.titleBumper, self.centerSpacing(Cribbage().name, self.titleBumper), self.titleBumper)
+            output += "\n Version: %s Author: %s" % (Cribbage().version, Cribbage().author)
             return output
     
         
