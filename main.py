@@ -11,16 +11,18 @@ if __name__ == "__main__":
 # Dev settings
     if devMode:
         game.settings.devMode = True
+        game.settings.difficulty = 'bestCard'
         game.settings.consoleLogging = 0
         game.devSettings.autoplay = True
         game.settings.fileLogging = True
         game.settings.games = 100
+        game.rules.winningScore = 121
 
     
 # Initial load screen for game 
     if game.settings.consoleLogging == 0:
         print("Please wait, playing games...")
-    game.consoleLog(game.gameHeader(), 1)
+    game.consoleLog(game.gameHeader(), 9)
     game.consoleLog("Notes: %s \n" % game.note, 2)
     game.consoleLog(game.columnOutput(game.rulesList(), isList=True, newLine=True), 2)
     game.consoleLog(game.titleBumper("Begin game"), 1)
@@ -56,14 +58,13 @@ if __name__ == "__main__":
             fp.write(jsonLog + "\n")
 
     if devMode:
-        print("\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ Game log $$$$$$$$$$$$$$$$$$$$$$$$$4$$$$$$")
+        print("\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ Game log $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         for k,v in game.log.items():
             if k == 'summary':
                 print("$$$ Summary $$$")
                 for k,v in v.items():
                     print(k, end=": ")
                     print(v)
-
             else:
                 print(k, end=": ")
                 print(v)

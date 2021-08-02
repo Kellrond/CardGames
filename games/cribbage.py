@@ -8,17 +8,15 @@ class Cribbage:
     def __init__(self, players=2):
         self.name = "Cribbage - Dev Edition"
         self.author = "Jordan Kell"
-        self.version = "0.0.3"
-        self.date = "2021-07-31"
-        self.note = "Full random play. Only score go, 15, pairs and 31"
-
+        self.version = "0.0.5"
+        self.date = "2021-08-01"
+        self.note = "Best card on play by score alone. Only score go, 15, pairs and 31"
         self.rules = self.Rules()
         self.hands = self.Hands()
         self.text = self.Text()
         self.deckSettings = self.DeckSettings()
         self.settings = self.Settings()
         self.devSettings = self.DevSettings()
-
         self.players = players
         self.playerNames = ["Jordan", "The machine"] 
         while len(self.playerNames) < self.players:
@@ -140,6 +138,40 @@ class Cribbage:
             return output           
 
     class PlayStage:
+        def bestCard(self, hand, count):
+            output = {
+                'score': 0,
+                'cardIndex': 0
+            }
+            evalHand = []
+            playableCardIndexes = self.PlayStage.playableCards(self, hand, count)
+            for i in playableCardIndexes:
+                evalHand.append([i, hand[i]])
+            for i, card in evalHand:
+                cardScore = 0
+                countValue = self.count + card.value
+                if countValue == 15:
+                    cardScore += 2
+                elif countValue == self.rules.countTarget:
+                    cardScore += 2
+                cardCount = len(self.play) + 1
+                if cardCount == 1:
+                    pass
+                else:
+                    cardsPlayed = [card.rank for card in self.play[-3:]] + [card.rank]
+                    cardsPlayed.reverse()   
+                    if len(set(cardsPlayed[0:4])) == 1 and cardCount >= 4:
+                        cardScore = 12
+                    elif len(set(cardsPlayed[0:3])) == 1 and cardCount >= 3:
+                        cardScore = 6
+                    elif len(set(cardsPlayed[0:2])) == 1:
+                        cardScore = 2
+                if cardScore > output['score']:
+                    output['score'] = cardScore
+                    output['cardIndex'] = i
+            
+            return output['cardIndex']
+
         def playableCards(self, hand, count):
             cardList = []
             for i, card in enumerate(hand):
@@ -154,20 +186,19 @@ class Cribbage:
                 self.winner = player
 
         def scorePairs(self):
-            cardsPlayed = len(self.play)
-            if cardsPlayed == 1:
-                return 0
-            cardsPlayed = [card.rank for card in self.play[:]]
-            cardsPlayed.reverse()   
             score = 0
-            if len(set(cardsPlayed[0:2])) == 1:
-                if len(set(cardsPlayed[0:3])) == 1 and cardsPlayed == 3:
-                    if len(set(cardsPlayed[0:4])) == 1 and cardsPlayed == 4:
-                        score = 12
-                    else:
-                        score = 6
-                else:
-                    score = 2
+            cardCount = len(self.play)
+            if cardCount == 1:
+                return 0
+            cardsPlayed = [card.rank for card in self.play[-4:]]
+            cardsPlayed.reverse()   
+
+            if len(set(cardsPlayed[0:4])) == 1 and cardCount >= 4:
+                score = 12
+            elif len(set(cardsPlayed[0:3])) == 1 and cardCount >= 3:
+                score = 6
+            elif len(set(cardsPlayed[0:2])) == 1:
+                score = 2
             return score
 
     class Text:
@@ -294,7 +325,7 @@ class Cribbage:
     def autoDiscard(self, player):
         hand = self.hands.hands[player]
         discard = []
-        if self.settings.difficulty == 'random':
+        if self.settings.difficulty == 'random' or self.settings.difficulty == 'bestCard':
             while len(hand) > self.rules.handSize:
                 pick = randrange(0,len(hand))
                 discard.append(hand.pop(pick))
@@ -304,17 +335,22 @@ class Cribbage:
         if len(self.playableCards) == 0:
             self.goList.append(player)
             if len(self.goList) != self.players:           
-                self.consoleLog(self.columnOutput("",self.centerSpacing(self.playerNames[player] + " calls GO"), "") , 1)   
+                self.consoleLog(self.columnOutput("",self.centerSpacing(self.playerNames[player] + " calls GO"), "") , 2)   
 
         else:  
             if self.settings.difficulty == 'random':
                 randPick = randrange(0,len(self.playableCards))
                 pick = self.playableCards[randPick]
                 play = hand.pop(pick)
-                self.playableCards.clear()
                 self.play.append(play)
-                self.count = sum(card.value for card in self.play)  
-            self.consoleLog(self.columnOutput(self.playerNames[player], play.string(), "Count: " + str(self.count)),1)        
+                self.count = sum(card.value for card in self.play)
+            if self.settings.difficulty == 'bestCard':
+                bestCard = self.PlayStage.bestCard(self, hand, self.count)  
+                play = hand.pop(bestCard)
+                self.play.append(play)
+                self.count = sum(card.value for card in self.play)
+            self.playableCards.clear()
+            self.consoleLog(self.columnOutput(self.playerNames[player], play.string(), "Count: " + str(self.count)),2)        
 
     def endGame(self, gameCount, duration):
         self.log['game'].append(gameCount)
@@ -379,7 +415,7 @@ class Cribbage:
                 output = console.pop(0)
                 for line in console:
                     output += " and " + line
-            output = self.playerNames[player] + " scores " + str(score) + " for " + output
+            output = "───  " + self.playerNames[player] + " scores " + str(score) + " for " + output
             self.PlayStage.scoreCount(self, player, score)
         else:
             return False
