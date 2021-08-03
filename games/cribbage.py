@@ -1,5 +1,5 @@
 from statistics import mean, stdev  
-from deck import Deck
+from deck import Deck, Cards
 from random import randrange
 import datetime as dt
 
@@ -8,9 +8,9 @@ class Cribbage:
     def __init__(self, players=2):
         self.name = "Cribbage - Dev Edition"
         self.author = "Jordan Kell"
-        self.version = "0.0.5"
-        self.date = "2021-08-01"
-        self.note = "Best card on play by score alone. Only score go, 15, pairs and 31"
+        self.version = "0.0.8b"
+        self.date = "2021-08-02"
+        self.note = "Best card on play by score alone. All scores in the play. Suggesting run plays"
         self.rules = self.Rules()
         self.hands = self.Hands()
         self.text = self.Text()
@@ -29,6 +29,7 @@ class Cribbage:
             self.prevScore.append(0)
             self.score.append(0)
         self.play = []
+        self.cut = Cards("Ace", 1, "Spades")
         self.playableCards = []
         self.goList = []
         self.round = 1
@@ -154,18 +155,10 @@ class Cribbage:
                     cardScore += 2
                 elif countValue == self.rules.countTarget:
                     cardScore += 2
-                cardCount = len(self.play) + 1
-                if cardCount == 1:
-                    pass
-                else:
-                    cardsPlayed = [card.rank for card in self.play[-3:]] + [card.rank]
-                    cardsPlayed.reverse()   
-                    if len(set(cardsPlayed[0:4])) == 1 and cardCount >= 4:
-                        cardScore = 12
-                    elif len(set(cardsPlayed[0:3])) == 1 and cardCount >= 3:
-                        cardScore = 6
-                    elif len(set(cardsPlayed[0:2])) == 1:
-                        cardScore = 2
+                
+                cardScore += self.PlayStage.scorePairs(self, testPairs=True, card=card) 
+                cardScore += self.PlayStage.scoreRuns(self, testRuns=True, card=card)
+
                 if cardScore > output['score']:
                     output['score'] = cardScore
                     output['cardIndex'] = i
@@ -185,13 +178,21 @@ class Cribbage:
             if self.score[player] >= self.rules.winningScore:
                 self.winner = player
 
-        def scorePairs(self):
+        def scorePairs(self, testPairs=False, **kwargs):
             score = 0
             cardCount = len(self.play)
-            if cardCount == 1:
+            if cardCount == 1 and not testPairs:
+                return 0
+            elif cardCount == 0:
                 return 0
             cardsPlayed = [card.rank for card in self.play[-4:]]
             cardsPlayed.reverse()   
+
+            if testPairs:
+                cardsPlayed = [kwargs['card'].rank] + cardsPlayed[:] 
+                cardCount = len(cardsPlayed)
+                if cardCount > 4:
+                    cardsPlayed = cardsPlayed[0:4]
 
             if len(set(cardsPlayed[0:4])) == 1 and cardCount >= 4:
                 score = 12
@@ -199,7 +200,28 @@ class Cribbage:
                 score = 6
             elif len(set(cardsPlayed[0:2])) == 1:
                 score = 2
+
             return score
+
+        def scoreRuns(self, testRuns=False, **kwargs):
+            score = 0 
+            runScoreList = [0]
+            thePlay = self.play.copy()
+
+            if testRuns:
+                thePlay += [kwargs['card']]
+
+            cardsPlayed = len(self.play)
+            if cardsPlayed >= 3:
+                for i in range(3, cardsPlayed + 1):
+                    evalCards = self.play[cardsPlayed - i: cardsPlayed].copy()
+                    sortedCards = sorted([card.value for card in evalCards])
+                    rangeList = list(range(min(sortedCards), max(sortedCards) + 1))
+                    if sortedCards == rangeList:
+                        runScoreList.append(i)
+            score = max(runScoreList)
+            return score
+
 
     class Text:
         def __init__(self) -> None:
@@ -384,6 +406,11 @@ class Cribbage:
             if pairs > 0:
                 score += pairs
                 console.append("pair")
+
+            runs = self.PlayStage.scoreRuns(self)
+            if runs > 0:
+                score += runs
+                console.append("run")
       
         if self.count == 15:
             score += 2
@@ -402,6 +429,7 @@ class Cribbage:
             clear = True
             score += 1
             console.append("Go")   
+
 
         if clear:
             self.play.clear()
@@ -493,6 +521,13 @@ class Cribbage:
             else:
                 self.autoDiscard(player)
         self.consoleLog(self.printHand(), 2)
+
+        # Cut
+        self.cut = round.cut()
+        self.consoleLog("─── Cut is an %s" % self.cut.string(), 1)
+        if self.cut.rank == 11:
+            self.score[self.dealer] += 1
+            self.consoleLog("%s scores 2 for the jack (nibs)" % self.playerNames[self.dealer], 1)
 
         # Play 
         self.consoleLog(self.innerBumper("Play"), 1)

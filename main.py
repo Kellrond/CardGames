@@ -18,7 +18,6 @@ if __name__ == "__main__":
         game.settings.games = 100
         game.rules.winningScore = 121
 
-    
 # Initial load screen for game 
     if game.settings.consoleLogging == 0:
         print("Please wait, playing games...")
